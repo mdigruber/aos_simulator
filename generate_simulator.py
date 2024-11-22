@@ -1,16 +1,7 @@
-## TODO What I can do
-# Generate Ground Truth
-# AOS Image
-# 
-
-# Things I cannot do:
+# Things currently not possible:
 # TIF as Ground Texture
-# TIF Ground Texture is mirrored+gmail
-
+# TIF Ground Texture is mirrored
 # Images as Float32, Gazebo only can do uint8
-# 
-
-
 
 import os
 import random
@@ -53,7 +44,7 @@ class SimulationRunner:
         self.iter_Number = 1000000
         self.iteration = 0
         # Set a default temperature threshold (in degrees Celsius)
-        self.temperature_threshold_C = 25 
+        self.temperature_threshold_C = 25
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
 
         # Path to the thermal texture database
@@ -72,9 +63,12 @@ class SimulationRunner:
             # Configure the simulation components
             self.configure_light_and_scene()
             self.configure_photo_shoot(i)
-            self.configure_forest()
 
-            # Save the label mask
+            # Saves label Mask
+            self.save_label_mask()
+
+            # Config for Forest
+            self.configure_forest()
 
             # Save the world configuration
             self.save_world_config()
@@ -93,11 +87,13 @@ class SimulationRunner:
 
     def generate_random_parameters(self):
         # Randomly select a thermal texture
-        thermal_textures = [f for f in os.listdir(self.thermal_texture_dir) if f.endswith('.TIF')]
+        thermal_textures = [
+            f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".TIF")
+        ]
         self.thermal_texture = random.choice(thermal_textures)
-        #self.thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
+        # self.thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
         print(f"Selected thermal texture: {self.thermal_texture}")
-     
+
         # Number of trees per hectare (ha)
         self.x_rand_treeNum = random.randint(0, 300)
         print("Number of trees per hectare =", self.x_rand_treeNum)
@@ -118,7 +114,8 @@ class SimulationRunner:
 
         # Convert spherical coordinates to Cartesian for light direction
         self.x_1, self.x_2, self.x_3 = self.to_cartesian(
-            1, self.x_rand_Alpha_rad, self.x_rand_Beta_rad)
+            1, self.x_rand_Alpha_rad, self.x_rand_Beta_rad
+        )
         if self.x_3 > 0:
             self.x_3 = -self.x_3  # Ensure sunlight comes from above
 
@@ -135,8 +132,11 @@ class SimulationRunner:
 
         # Configure the scene
         scene = self.world_config.get_scene()
-        scene.set_ambient(gzm.Color(
-            self.x_rand_ambient, self.x_rand_ambient, self.x_rand_ambient, 1.0))
+        scene.set_ambient(
+            gzm.Color(
+                self.x_rand_ambient, self.x_rand_ambient, self.x_rand_ambient, 1.0
+            )
+        )
 
     def configure_photo_shoot(self, i):
         photo_shoot_config = PhotoShootConfig()
@@ -151,23 +151,22 @@ class SimulationRunner:
         os.makedirs(self.patch_folder)
 
         # Gets the min and max temperatur in Kelvin
-        self.save_label_mask()
-
+        
         photo_shoot_config.set_directory(self.patch_folder)
 
         img_Name = f"{self.PC_Num}_{i}"
         photo_shoot_config.set_prefix(img_Name)
 
         # Set camera properties
-        photo_shoot_config.set_direct_thermal_factor(20) # direct sunlight
-        photo_shoot_config.set_indirect_thermal_factor(5) #indirect sunlight
+        photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
+        photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
 
         photo_shoot_config.set_save_rgb(False)
         photo_shoot_config.set_save_thermal(True)
         photo_shoot_config.set_save_depth(False)
 
         # Set thermal thresholds based on expected temperature ranges
-        lower_thermal_threshold = self.x_rand_Tree - 20  
+        lower_thermal_threshold = self.x_rand_Tree - 20
         upper_thermal_threshold = self.x_rand_Tree + 20
 
         photo_shoot_config.set_lower_thermal_threshold(lower_thermal_threshold)
@@ -178,13 +177,21 @@ class SimulationRunner:
         spacing = 0.5
 
         inverse_x = True
-        
+
         if inverse_x:
-            self.x_positions = [(i * spacing - ((num_images - 1) / 2) * spacing) * -1 for i in range(num_images)]
+            self.x_positions = [
+                (i * spacing - ((num_images - 1) / 2) * spacing) * -1
+                for i in range(num_images)
+            ]
         else:
-            self.x_positions = [i * spacing - ((num_images - 1) / 2) * spacing for i in range(num_images)]
-        
-        self.poses = [gzm.Pose3d(x, 0, 35, 0.0, 1.57, 0.0) for x in self.x_positions] # x, y, z, -rotaton, tilt angle, +rotation
+            self.x_positions = [
+                i * spacing - ((num_images - 1) / 2) * spacing
+                for i in range(num_images)
+            ]
+
+        self.poses = [
+            gzm.Pose3d(x, 0, 35, 0.0, 1.57, 0.0) for x in self.x_positions
+        ]  # x, y, z, -rotaton, tilt angle, +rotation
 
         photo_shoot_config.add_poses(self.poses)
 
@@ -204,62 +211,66 @@ class SimulationRunner:
         forest_config.set_ground_thermal_texture(
             os.path.join(self.thermal_texture_dir, self.thermal_texture),
             self.min_ground_temp_K,  # Minimal temperature in Kelvin
-            self.max_ground_temp_K   # Maximal temperature in Kelvin
+            self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
         forest_config.set_twigs_temperature(self.x_rand_Tree)
         forest_config.set_size(100)  # Set forest size to 35x35 meters
+
         forest_config.set_trees(self.x_rand_treeNum)
 
         # Define tree species and properties (adjust as needed)
-        forest_config.set_species("Birch", {
-            "percentage": 1.0,
-            "homogeneity": 0.95,
-            "trunk_texture": 0,
-            "twigs_texture": 0,
-            "tree_properties": {
-                "clump_max": 0.45,
-                "clump_min": 0.4,
-                "length_falloff_factor": 0.65,
-                "length_falloff_power": 0.75,
-                "branch_factor": 2.45,
-                "radius_falloff_rate": 0.7,
-                "climb_rate": 0.55,
-                "taper_rate": 0.8,
-                "twist_rate": 8.0,
-                "segments": 6,
-                "levels": 6,
-                "sweep_amount": 0.0,
-                "initial_branch_length": 0.7,
-                "trunk_length": 1.0,
-                "drop_amount": 0.0,
-                "grow_amount": 0.4,
-                "v_multiplier": 0.2,
-                "twig_scale": 0.2
-            }
-        })
+        forest_config.set_species(
+            "Birch",
+            {
+                "percentage": 1.0,
+                "homogeneity": 0.95,
+                "trunk_texture": 0,
+                "twigs_texture": 0,
+                "tree_properties": {
+                    "clump_max": 0.45,
+                    "clump_min": 0.4,
+                    "length_falloff_factor": 0.65,
+                    "length_falloff_power": 0.75,
+                    "branch_factor": 2.45,
+                    "radius_falloff_rate": 0.7,
+                    "climb_rate": 0.55,
+                    "taper_rate": 0.8,
+                    "twist_rate": 8.0,
+                    "segments": 6,
+                    "levels": 6,
+                    "sweep_amount": 0.0,
+                    "initial_branch_length": 0.7,
+                    "trunk_length": 1.0,
+                    "drop_amount": 0.0,
+                    "grow_amount": 0.4,
+                    "v_multiplier": 0.2,
+                    "twig_scale": 0.2,
+                },
+            },
+        )
 
         self.world_config.add_plugin(forest_config)
 
     def compute_label_mask(self):
-        thermal_image = np.array(Image.open(os.path.join(self.thermal_texture_dir, self.thermal_texture)))
+        thermal_image = np.array(
+            Image.open(os.path.join(self.thermal_texture_dir, self.thermal_texture))
+        )
 
         thermal_image_K = thermal_image + 273.15
 
-        self.min_ground_temp_K = thermal_image_K.min() 
-        self.max_ground_temp_K = thermal_image_K.max() 
+        self.min_ground_temp_K = thermal_image_K.min()
+        self.max_ground_temp_K = thermal_image_K.max()
 
         label_mask = np.where(thermal_image_K >= self.temperature_threshold_K, 1, 0)
 
         return label_mask
-    
 
     def save_label_mask(self):
         label_mask = self.compute_label_mask()
 
-        label_mask_path = os.path.join(self.patch_folder, 'label_mask.npy')
+        label_mask_path = os.path.join(self.patch_folder, "label_mask.npy")
         np.save(label_mask_path, label_mask)
-
 
     def save_world_config(self):
         self.world_config.save(self.world_file_out)
@@ -274,7 +285,6 @@ class SimulationRunner:
 
     def compute_integral_image(self):
         pass
-   
 
     def write_poses(self):
         label_path = f"{self.patch_folder}/poses.txt"
