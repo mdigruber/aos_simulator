@@ -48,7 +48,7 @@ class SimulationRunner:
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
 
         # Path to the thermal texture database
-        self.thermal_texture_dir = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/"
+        self.thermal_texture_dir = "/home/mdigruber/gazebo_simulator/models/procedural-forest/materials/textures/thermal/output"
 
     def run(self):
         for i in range(self.iter_Number):
@@ -88,7 +88,7 @@ class SimulationRunner:
     def generate_random_parameters(self):
         # Randomly select a thermal texture
         thermal_textures = [
-            f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".TIF")
+            f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".png")
         ]
         self.thermal_texture = random.choice(thermal_textures)
         # self.thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
@@ -205,7 +205,7 @@ class SimulationRunner:
         forest_config.set_generate(True)
         forest_config.set_ground_texture(0)
         forest_config.set_direct_spawning(True)
-        forest_config.set_texture_size(512)
+        forest_config.set_texture_size(35)
 
         # Use the selected thermal texture
         forest_config.set_ground_thermal_texture(
@@ -217,7 +217,8 @@ class SimulationRunner:
         forest_config.set_twigs_temperature(self.x_rand_Tree)
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
-        forest_config.set_trees(self.x_rand_treeNum)
+        #forest_config.set_trees(self.x_rand_treeNum)
+        forest_config.set_trees(0)
 
         # Define tree species and properties (adjust as needed)
         forest_config.set_species(
@@ -253,14 +254,18 @@ class SimulationRunner:
         self.world_config.add_plugin(forest_config)
 
     def compute_label_mask(self):
+        thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
         thermal_image = np.array(
-            Image.open(os.path.join(self.thermal_texture_dir, self.thermal_texture))
+            Image.open(thermal_texture)
         )
 
         thermal_image_K = thermal_image + 273.15
 
         self.min_ground_temp_K = thermal_image_K.min()
         self.max_ground_temp_K = thermal_image_K.max()
+
+        print(f"Min Ground Temp: {self.min_ground_temp_K}")
+        print(f"Max Ground Temp: {self.max_ground_temp_K}")
 
         label_mask = np.where(thermal_image_K >= self.temperature_threshold_K, 1, 0)
 
