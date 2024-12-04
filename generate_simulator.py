@@ -91,7 +91,6 @@ class SimulationRunner:
             f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".png")
         ]
         self.thermal_texture = random.choice(thermal_textures)
-        # self.thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
         print(f"Selected thermal texture: {self.thermal_texture}")
 
         # Number of trees per hectare (ha)
@@ -217,9 +216,8 @@ class SimulationRunner:
         forest_config.set_twigs_temperature(self.x_rand_Tree)
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
-        #forest_config.set_trees(self.x_rand_treeNum)
-        forest_config.set_trees(0)
-
+        forest_config.set_trees(self.x_rand_treeNum)
+        
         # Define tree species and properties (adjust as needed)
         forest_config.set_species(
             "Birch",
@@ -254,10 +252,13 @@ class SimulationRunner:
         self.world_config.add_plugin(forest_config)
 
     def compute_label_mask(self):
-        thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal/000026.TIF"
+        thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal"
+        thermal_texture_tif_image = os.path.join(thermal_texture, self.thermal_texture.replace(".png", ".TIF"))
         thermal_image = np.array(
-            Image.open(thermal_texture)
+            Image.open(thermal_texture_tif_image)
         )
+
+        print(thermal_texture_tif_image)
 
         thermal_image_K = thermal_image + 273.15
 
