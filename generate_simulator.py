@@ -17,7 +17,7 @@ import gz.math7 as gzm
 from photo_shoot_config import PhotoShootConfig
 from forest_config import ForestConfig
 from world_config import WorldConfig
-from person_config import PersonConfig
+# from person_config import PersonConfig
 from launcher import Launcher
 
 
@@ -117,7 +117,7 @@ class SimulationRunner:
             self.x_3 = -self.x_3  # Ensure sunlight comes from above
 
         # Tree top temperature in degrees Celsius and convert to Kelvin
-        self.x_rand_Tree_C = -20#random.uniform(15, 30)
+        self.x_rand_Tree_C = random.uniform(15, 30)
         self.x_rand_Tree = self.x_rand_Tree_C + 273.15
         print(f"Tree top temperature: {self.x_rand_Tree_C}°C / {self.x_rand_Tree}K")
 
@@ -171,14 +171,12 @@ class SimulationRunner:
 
         photo_shoot_config.set_lower_thermal_threshold(lower_thermal_threshold)
         photo_shoot_config.set_upper_thermal_threshold(upper_thermal_threshold)
-        # photo_shoot_config.set_upper_thermal_threshold(330)
-        # photo_shoot_config.set_lower_thermal_threshold(285)
 
         # Define drone poses along a straight line with 0.5m spacing
         num_images = 31
-        spacing = 1
+        spacing = 0.5
 
-        inverse_x = True
+        inverse_x = False
 
         if inverse_x:
             self.x_positions = [
@@ -218,9 +216,9 @@ class SimulationRunner:
             self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
-        forest_config.set_trunk_temperature(291.15) # In Kelvin
-        forest_config.set_twigs_temperature(287.15) # In Kelvin
-        # forest_config.set_twigs_temperature(self.x_rand_Tree)
+        forest_config.set_trunk_temperature(self.x_rand_Tree+10) # In Kelvin
+        # forest_config.set_twigs_temperature(287.15) # In Kelvin
+        forest_config.set_twigs_temperature(self.x_rand_Tree)
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
         #forest_config.set_trees(0)
@@ -266,8 +264,6 @@ class SimulationRunner:
             Image.open(thermal_texture_tif_image)
         )
 
-        print(thermal_texture_tif_image)
-
         thermal_image_K = thermal_image + 273.15
 
         self.min_ground_temp_K = thermal_image_K.min()
@@ -287,12 +283,12 @@ class SimulationRunner:
         np.save(label_mask_path, label_mask)
 
     def save_world_config(self):
-        person_config = PersonConfig()
-        person_config.set_model_pose("sitting")                 # Must match a .dae mesh file
-                                                                # in the respective model!
-        person_config.set_temperature(310)                      # In Kelvin
-        person_config.add_pose(gzm.Pose3d(0, 0, 0, 0, 0, 0))    # First three values are x, y, z coordinates 
-        self.world_config.add_plugin(person_config)
+        # person_config = PersonConfig()
+        # person_config.set_model_pose("sitting")                 # Must match a .dae mesh file
+        #                                                         # in the respective model!
+        # person_config.set_temperature(310)                      # In Kelvin
+        # person_config.add_pose(gzm.Pose3d(0, 0, 0, 0, 0, 0))    # First three values are x, y, z coordinates 
+        # self.world_config.add_plugin(person_config)
 
         self.world_config.save(self.world_file_out)
 
