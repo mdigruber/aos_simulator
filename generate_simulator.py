@@ -1,8 +1,3 @@
-# Things currently not possible:
-# TIF as Ground Texture
-# TIF Ground Texture is mirrored
-# Images as Float32, Gazebo only can do uint8
-
 import os
 import random
 import time
@@ -17,7 +12,7 @@ import gz.math7 as gzm
 from photo_shoot_config import PhotoShootConfig
 from forest_config import ForestConfig
 from world_config import WorldConfig
-# from person_config import PersonConfig
+from person_config import PersonConfig
 from launcher import Launcher
 
 
@@ -73,6 +68,9 @@ class SimulationRunner:
 
             # Launch the simulation
             self.launch_simulation()
+
+            # Generate ground truth image
+            self.generate_ground_truth(i)
 
             # Compute the integral image
             # self.compute_integral_image()
@@ -147,8 +145,8 @@ class SimulationRunner:
 
         os.makedirs(self.patch_folder)
 
-        # Gets the min and max temperatur in Kelvin
-        
+        # Gets the min and max temperature in Kelvin
+
         photo_shoot_config.set_directory(self.patch_folder)
 
         img_Name = f"{self.PC_Num}_{i}"
@@ -191,7 +189,7 @@ class SimulationRunner:
 
         self.poses = [
             gzm.Pose3d(x, 0, 35, 0.0, 1.57, 0.0) for x in self.x_positions
-        ]  # x, y, z, -rotaton, tilt angle, +rotation
+        ]  # x, y, z, -rotation, tilt angle, +rotation
 
         photo_shoot_config.add_poses(self.poses)
 
@@ -199,8 +197,6 @@ class SimulationRunner:
         self.write_poses()
 
     def configure_forest(self):
-
-
         self.forest_config = ForestConfig()
         forest_config = self.forest_config
 
@@ -216,14 +212,12 @@ class SimulationRunner:
             self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
-        forest_config.set_trunk_temperature(self.x_rand_Tree+10) # In Kelvin
-        # forest_config.set_twigs_temperature(287.15) # In Kelvin
-        forest_config.set_twigs_temperature(self.x_rand_Tree)
+        forest_config.set_trunk_temperature(self.x_rand_Tree + 10)  # In Kelvin
+        forest_config.set_twigs_temperature(self.x_rand_Tree)  # In Kelvin
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
-        #forest_config.set_trees(0)
         forest_config.set_trees(self.x_rand_treeNum)
-        
+
         # Define tree species and properties (adjust as needed)
         forest_config.set_species(
             "Birch",
@@ -258,7 +252,7 @@ class SimulationRunner:
         self.world_config.add_plugin(forest_config)
 
     def compute_label_mask(self):
-        thermal_texture = "/home/mdigruber/gazebo_sim/models/procedural-forest/materials/textures/thermal"
+        thermal_texture = "/home/mdigruber/gazebo_simulator/models/procedural-forest/materials/textures/thermal"
         thermal_texture_tif_image = os.path.join(thermal_texture, self.thermal_texture.replace(".png", ".TIF"))
         thermal_image = np.array(
             Image.open(thermal_texture_tif_image)
@@ -287,7 +281,7 @@ class SimulationRunner:
         # person_config.set_model_pose("sitting")                 # Must match a .dae mesh file
         #                                                         # in the respective model!
         # person_config.set_temperature(310)                      # In Kelvin
-        # person_config.add_pose(gzm.Pose3d(0, 0, 0, 0, 0, 0))    # First three values are x, y, z coordinates 
+        # person_config.add_pose(gzm.Pose3d(0, 0, 0, 0, 0, 0))    # First three values are x, y, z coordinates
         # self.world_config.add_plugin(person_config)
 
         self.world_config.save(self.world_file_out)
@@ -352,6 +346,78 @@ class SimulationRunner:
         y = radius * sin(theta) * sin(phi)
         z = radius * cos(theta)
         return (x, y, z)
+
+    def generate_ground_truth(self, i):
+        # Reload world_config
+        self.world_config = WorldConfig()
+        self.world_config.load(self.world_file_in)
+
+        # Use the same random parameters generated before
+        # Configure light and scene with the same parameters
+        self.configure_light_and_scene()
+
+        # Configure photo shoot with only one pose at (0,0,35)
+        self.configure_photo_shoot_ground_truth(i)
+
+        # Remove forest by setting trees to zero
+        self.configure_forest_ground_truth()
+
+        # Save the world configuration
+        self.save_world_config()
+
+        # Launch the simulation
+        self.launch_simulation()
+
+    def configure_photo_shoot_ground_truth(self, i):
+        photo_shoot_config = PhotoShootConfig()
+
+        # Use the same folder
+        photo_shoot_config.set_directory(self.patch_folder)
+
+        # Set a different prefix for the ground truth images
+        img_Name = f"gt_{self.PC_Num}_{i}"
+        photo_shoot_config.set_prefix(img_Name)
+
+        # Set camera properties as before
+        photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
+        photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
+
+        photo_shoot_config.set_save_rgb(False)
+        photo_shoot_config.set_save_thermal(True)
+        photo_shoot_config.set_save_depth(False)
+
+        # Set thermal thresholds based on expected temperature ranges
+        lower_thermal_threshold = self.min_ground_temp_K - 10
+        upper_thermal_threshold = self.max_ground_temp_K + 10
+
+        photo_shoot_config.set_lower_thermal_threshold(lower_thermal_threshold)
+        photo_shoot_config.set_upper_thermal_threshold(upper_thermal_threshold)
+
+        # Set only one pose at (0,0,35)
+        pose = gzm.Pose3d(0, 0, 35, 0.0, 1.57, 0.0)
+        photo_shoot_config.add_pose(pose)
+
+        self.world_config.add_plugin(photo_shoot_config)
+
+    def configure_forest_ground_truth(self):
+        self.forest_config = ForestConfig()
+        forest_config = self.forest_config
+
+        # Set forest generation but with zero trees
+        forest_config.set_generate(True)
+        forest_config.set_trees(0)
+        forest_config.set_ground_texture(0)
+        forest_config.set_direct_spawning(True)
+        forest_config.set_texture_size(35)
+
+        # Use the same ground thermal texture
+        forest_config.set_ground_thermal_texture(
+            os.path.join(self.thermal_texture_dir, self.thermal_texture),
+            self.min_ground_temp_K,  # Minimal temperature in Kelvin
+            self.max_ground_temp_K,  # Maximal temperature in Kelvin
+        )
+
+        self.world_config.add_plugin(forest_config)
 
 
 if __name__ == "__main__":
