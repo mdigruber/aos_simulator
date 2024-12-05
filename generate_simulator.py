@@ -212,8 +212,8 @@ class SimulationRunner:
             self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
-        forest_config.set_trunk_temperature(self.x_rand_Tree + 10)  # In Kelvin
-        forest_config.set_twigs_temperature(self.x_rand_Tree)  # In Kelvin
+        forest_config.set_trunk_temperature(self.min_ground_temp_K)  # In Kelvin
+        forest_config.set_twigs_temperature(self.min_ground_temp_K)  # In Kelvin
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
         forest_config.set_trees(self.x_rand_treeNum)
@@ -277,13 +277,6 @@ class SimulationRunner:
         np.save(label_mask_path, label_mask)
 
     def save_world_config(self):
-        # person_config = PersonConfig()
-        # person_config.set_model_pose("sitting")                 # Must match a .dae mesh file
-        #                                                         # in the respective model!
-        # person_config.set_temperature(310)                      # In Kelvin
-        # person_config.add_pose(gzm.Pose3d(0, 0, 0, 0, 0, 0))    # First three values are x, y, z coordinates
-        # self.world_config.add_plugin(person_config)
-
         self.world_config.save(self.world_file_out)
 
     def launch_simulation(self):
