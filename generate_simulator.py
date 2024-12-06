@@ -1,23 +1,17 @@
 import os
 import random
-import time
 import numpy as np
 from PIL import Image
 import math
 import shutil
-
-import sdformat13 as sdf
 import gz.math7 as gzm
-
 from photo_shoot_config import PhotoShootConfig
 from forest_config import ForestConfig
 from world_config import WorldConfig
-from person_config import PersonConfig
 from launcher import Launcher
-
-
 from typing import Tuple, Union
 from math import sin, cos, atan2, sqrt
+
 
 Number = Union[int, float]
 Vector = Tuple[Number, Number, Number]
@@ -25,6 +19,7 @@ Vector = Tuple[Number, Number, Number]
 
 class SimulationRunner:
     def __init__(self):
+        
         # Initialize file paths and directories
         self.world_file_in = "../../worlds/example_photo_shoot.sdf"
         self.world_file_out = "../../photo_shoot.sdf"
@@ -39,6 +34,7 @@ class SimulationRunner:
         self.PC_Num = 0
         self.iter_Number = 1000000
         self.iteration = 0
+        
         # Set a default temperature threshold (in degrees Celsius)
         self.temperature_threshold_C = 25
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
@@ -71,12 +67,6 @@ class SimulationRunner:
 
             # Generate ground truth image
             self.generate_ground_truth(i)
-
-            # Compute the integral image
-            # self.compute_integral_image()
-
-            # Save the dataset entry
-            # self.save_dataset_entry()
 
             # Print iteration info
             print(f"\nIteration {i + 1} / {self.iter_Number} is running\n")
@@ -133,7 +123,7 @@ class SimulationRunner:
             )
         )
 
-    def configure_photo_shoot(self, i):
+    def configure_photo_shoot(self, i: int):
         photo_shoot_config = PhotoShootConfig()
 
         # Generate folder for every iteration
@@ -253,10 +243,10 @@ class SimulationRunner:
 
     def compute_label_mask(self):
         thermal_texture = "/home/mdigruber/gazebo_simulator/models/procedural-forest/materials/textures/thermal"
-        thermal_texture_tif_image = os.path.join(thermal_texture, self.thermal_texture.replace(".png", ".TIF"))
-        thermal_image = np.array(
-            Image.open(thermal_texture_tif_image)
+        thermal_texture_tif_image = os.path.join(
+            thermal_texture, self.thermal_texture.replace(".png", ".TIF")
         )
+        thermal_image = np.array(Image.open(thermal_texture_tif_image))
 
         thermal_image_K = thermal_image + 273.15
 
@@ -296,20 +286,6 @@ class SimulationRunner:
         with open(label_path, "w+") as file:
             for coords in self.x_positions:
                 file.write(f"{coords},0,35\n")
-
-    # def save_dataset_entry(self):
-    #     integral_image_path = os.path.join(self.patch_folder, 'integral_image.npy')
-    #     label_mask_path = os.path.join(self.patch_folder, 'label_mask.npy')
-
-    #     entry_id = f"entry_{self.PC_Num}_{self.iteration}"
-
-    #     if not os.path.exists(self.database_dir):
-    #         os.makedirs(self.database_dir)
-
-    #     shutil.copy(integral_image_path, os.path.join(self.database_dir, f"{entry_id}_integral.npy"))
-    #     shutil.copy(label_mask_path, os.path.join(self.database_dir, f"{entry_id}_label.npy"))
-
-    #     print(f"Saved dataset entry: {entry_id}")
 
     @staticmethod
     def distance(a: Vector, b: Vector) -> Number:
