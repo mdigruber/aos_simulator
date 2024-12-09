@@ -42,6 +42,9 @@ def convert_32bit_to_16bit(image_path, output_path):
         image_16bit = normalized_data.astype(np.uint16)
         print(f"Min 16-bit value: {image_16bit[min_index]}, Max 16-bit value: {image_16bit[max_index]}")
         
+        #image_16bit = image_data.astype(np.uint16)
+        #print(f"Min 16-bit value: {image_16bit[min_index]}, Max 16-bit value: {image_16bit[max_index]}")
+        
         # Rotate the image 90 degrees to the right (clockwise)
         image_rotated = np.rot90(image_16bit, k=-1)  # k=-1 for clockwise rotation
 

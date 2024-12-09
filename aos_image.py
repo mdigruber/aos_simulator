@@ -11,6 +11,7 @@ import pyaos
 import glm
 import glob
 import re
+import tifffile
 
 
 image_folder_path = r"/home/mdigruber/AOS/AOS for Drone Swarms/LFR/data/img_markus"  # Enter path to where your images are saved.
@@ -87,9 +88,6 @@ def utils_pose_to_virtualcamera(vpose):
     lookAt = glm.lookAt(Posvec, Posvec + FrontVec, Upvec)
     return np.asarray(glm.transpose(lookAt))
 
-
-
-
 with open(pose_file, "r") as f:
     lines = f.readlines()
 
@@ -103,7 +101,7 @@ for line in lines:
     image_posy.append(float(line.split(",")[1]))
     image_posz.append(float(line.split(",")[2]))
 
-ref_loc = [image_posy, image_posx]
+ref_loc = [image_posx, image_posy]
 altitude_list = image_posz
 
 center_index = number_of_images // 2 + 1
@@ -112,7 +110,7 @@ site_poses = []
 for i in range(number_of_images):
     M = createviewmateuler(
         np.array([0.0, 0.0, 0.0]),
-        np.array([ref_loc[0][i], ref_loc[1][i], -altitude_list[i]]),
+        np.array([ref_loc[1][i], ref_loc[0][i], -altitude_list[i]]),
     )
     ViewMatrix = np.vstack((M, np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)))
     camerapose = np.asarray(ViewMatrix.transpose(), dtype=np.float32)
@@ -151,7 +149,13 @@ proj_RGBimg = aos.render(
     utils_pose_to_virtualcamera(site_poses[center_index]), render_fov
 )
 
+print(proj_RGBimg.min())
+print(proj_RGBimg.max())
+
 tmp_RGB = divide_by_alpha(proj_RGBimg)
+print(tmp_RGB.min())
+print(tmp_RGB.max())
+
 cv2.imwrite(
     os.path.join(results_path, f"integral_{str(0)}.png"), tmp_RGB
 )

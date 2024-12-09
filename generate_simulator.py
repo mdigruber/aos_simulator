@@ -23,7 +23,7 @@ class SimulationRunner:
         # Initialize file paths and directories
         self.world_file_in = "../../worlds/example_photo_shoot.sdf"
         self.world_file_out = "../../photo_shoot.sdf"
-        self.output_directory = "../../data/simulator"
+        self.output_directory = "/home/mdigruber/Desktop/simulator"
         self.database_dir = "/home/mdigruber/training_data/"
 
         # Load the initial world configuration
