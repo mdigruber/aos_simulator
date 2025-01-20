@@ -40,7 +40,7 @@ class SimulationRunner:
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
 
         # Path to the thermal texture database
-        self.thermal_texture_dir = "/home/mdigruber/gazebo_simulator/models/procedural-forest/materials/textures/thermal/output"
+        self.thermal_texture_dir = "/home/mdigruber/gazebo_simulator/thermal_textures/png_images"
 
     def run(self):
         for i in range(self.iter_Number):
@@ -112,6 +112,7 @@ class SimulationRunner:
         print(f"Tree top temperature: {self.x_rand_Tree_C}°C / {self.x_rand_Tree}K")
 
     def configure_light_and_scene(self):
+
         # Configure the sun as the light source
         light = self.world_config.get_light("sun")
         light.set_direction(gzm.Vector3d(self.x_1, self.x_2, self.x_3))
@@ -145,8 +146,9 @@ class SimulationRunner:
         photo_shoot_config.set_prefix(img_Name)
 
         # Set camera properties
-        photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
-        photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
+        # TODO: Disable Sunlight 
+        #photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
+        #photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
 
         photo_shoot_config.set_save_rgb(False)
         photo_shoot_config.set_save_thermal(True)
@@ -195,7 +197,10 @@ class SimulationRunner:
         forest_config.set_generate(True)
         forest_config.set_ground_texture(0)
         forest_config.set_direct_spawning(True)
-        forest_config.set_texture_size(35)
+
+
+        #TODO: Check if correct
+        forest_config.set_texture_size(23)
 
         # Use the selected thermal texture
         forest_config.set_ground_thermal_texture(
@@ -206,6 +211,9 @@ class SimulationRunner:
 
         forest_config.set_trunk_temperature(self.min_ground_temp_K)  # In Kelvin
         forest_config.set_twigs_temperature(self.min_ground_temp_K)  # In Kelvin
+
+
+        #TODO: Check if correct
         forest_config.set_size(100)  # Set forest size to 35x35 meters
 
         forest_config.set_trees(self.x_rand_treeNum)
@@ -244,7 +252,7 @@ class SimulationRunner:
         self.world_config.add_plugin(forest_config)
 
     def compute_label_mask(self):
-        thermal_texture = "/home/mdigruber/gazebo_simulator/models/procedural-forest/materials/textures/thermal"
+        thermal_texture = "/home/mdigruber/gazebo_simulator/thermal_textures/tif_images"
         thermal_texture_tif_image = os.path.join(
             thermal_texture, self.thermal_texture.replace(".png", ".TIF")
         )
