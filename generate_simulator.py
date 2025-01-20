@@ -36,7 +36,7 @@ class SimulationRunner:
         self.iteration = 0
         
         # Set a default temperature threshold (in degrees Celsius)
-        self.temperature_threshold_C = 25
+        self.temperature_threshold_C = 25 # somewhere between 25 and 60 
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
 
         # Path to the thermal texture database
@@ -72,6 +72,7 @@ class SimulationRunner:
             print(f"\nIteration {i + 1} / {self.iter_Number} is running\n")
 
     def generate_random_parameters(self):
+        
         # Randomly select a thermal texture
         thermal_textures = [
             f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".png")
@@ -87,6 +88,7 @@ class SimulationRunner:
         self.x_rand_ambient = random.uniform(0.5, 1.0)
 
         print("Ambient light =", self.x_rand_ambient)
+        
         # Azimuth angle of sunlight direction (Alpha)
         self.x_rand_Alpha = random.uniform(0, 45)
         self.x_rand_Alpha_rad = math.radians(self.x_rand_Alpha)
@@ -160,11 +162,11 @@ class SimulationRunner:
         photo_shoot_config.set_lower_thermal_threshold(lower_thermal_threshold)
         photo_shoot_config.set_upper_thermal_threshold(upper_thermal_threshold)
 
-        # Define drone poses along a straight line with 0.5m spacing
+        # Define drone poses along a straight line with 0.5m spacing (vertical)
         num_images = 31
         spacing = 0.5
 
-        inverse_x = False
+        inverse_x = True
 
         if inverse_x:
             self.x_positions = [
@@ -178,7 +180,7 @@ class SimulationRunner:
             ]
 
         self.poses = [
-            gzm.Pose3d(x, 0, 35, 0.0, 1.57, 0.0) for x in self.x_positions
+            gzm.Pose3d(0, x, 35, 0.0, 1.57, 0.0) for x in self.x_positions
         ]  # x, y, z, -rotation, tilt angle, +rotation
 
         photo_shoot_config.add_poses(self.poses)
@@ -253,10 +255,10 @@ class SimulationRunner:
         self.min_ground_temp_K = thermal_image_K.min()
         self.max_ground_temp_K = thermal_image_K.max()
 
-        print(f"Min Ground Temp: {self.min_ground_temp_K}")
-        print(f"Max Ground Temp: {self.max_ground_temp_K}")
+        print(f"Min Ground Temp: {self.min_ground_temp_K - 273.15} C / {self.min_ground_temp_K} K")
+        print(f"Max Ground Temp: {self.max_ground_temp_K - 273.15} C / {self.max_ground_temp_K} K")
 
-        label_mask = np.where(thermal_image_K >= self.temperature_threshold_K, 1, 0)
+        label_mask = np.where(thermal_image >= self.temperature_threshold_C, 1, 0)
 
         return label_mask
 
@@ -285,7 +287,7 @@ class SimulationRunner:
 
         with open(label_path, "w+") as file:
             for coords in self.x_positions:
-                file.write(f"{coords},0,35\n")
+                file.write(f"0,{coords},35\n")
 
     @staticmethod
     def distance(a: Vector, b: Vector) -> Number:
