@@ -98,13 +98,13 @@ class SimulationRunner:
         
         # Random Env Temp and get texture from folder
         self.env_temperature = random.randint(8,10) # TODO: specify
-        self.thermal_texture_dir = f"{self.thermal_texture_dir}/{self.env_temperature}"
-        self.thermal_texture_dir_tif = f"{self.thermal_texture_dir_tif}/{self.env_temperature}"
+        self.thermal_texture_env_dir = f"{self.thermal_texture_dir}/{self.env_temperature}"
+        self.thermal_texture_dir_env_tif = f"{self.thermal_texture_dir_tif}/{self.env_temperature}"
         print(f"Selected Env temp: {self.env_temperature}")
 
         # Randomly select a thermal texture
         thermal_textures = [
-            f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".png")
+            f for f in os.listdir(self.thermal_texture_env_dir) if f.endswith(".png")
         ]
         self.thermal_texture = random.choice(thermal_textures)
         print(f"Selected thermal texture: {self.thermal_texture}")
@@ -114,7 +114,7 @@ class SimulationRunner:
         print("Number of trees per hectare =", self.x_rand_treeNum)
 
 
-        #self.get_min_max_temp()
+        self.get_min_max_temp()
 
         # Ambient light
         # self.x_rand_ambient = random.uniform(0.5, 1.0)
@@ -245,7 +245,7 @@ class SimulationRunner:
         # Use the selected thermal texture
         # map to minimum an maximum in the thermal texture
         forest_config.set_ground_thermal_texture(
-            os.path.join(self.thermal_texture_dir, self.thermal_texture),
+            os.path.join(self.thermal_texture_env_dir, self.thermal_texture),
             0,#self.min_ground_temp_K, # Minimal  temperature in Kelvin
             655,#self.max_ground_temp_K # Minimal # Maximal temperature in Kelvin
         )
@@ -298,7 +298,7 @@ class SimulationRunner:
 
     def get_min_max_temp(self):
         thermal_texture_tif_image = os.path.join(
-            self.thermal_texture_dir_tif, self.thermal_texture.replace(".png", ".TIF")
+            self.thermal_texture_dir_env_tif, self.thermal_texture.replace(".png", ".TIF")
         )
         thermal_image = np.array(Image.open(thermal_texture_tif_image))
 
@@ -428,7 +428,7 @@ class SimulationRunner:
 
         # Use the same ground thermal texture
         forest_config.set_ground_thermal_texture(
-            os.path.join(self.thermal_texture_dir, self.thermal_texture),
+            os.path.join(self.thermal_texture_env_dir, self.thermal_texture),
             0, #self.min_ground_temp_K, # Minimal temperature in Kelvin
             655#self.max_ground_temp_K # Maximal temperature in Kelvin
         )
