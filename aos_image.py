@@ -97,14 +97,16 @@ image_posz = []
 
 
 for line in lines:
-    image_posx.append(float(line.split(",")[0])*-1)
-    image_posy.append(float(line.split(",")[1]))
+    image_posx.append(float(line.split(",")[0]))
+    image_posy.append(float(line.split(",")[1]) * -1)
     image_posz.append(float(line.split(",")[2]))
 
 ref_loc = [image_posx, image_posy]
 altitude_list = image_posz
 
 center_index = number_of_images // 2 + 1
+
+print(center_index)
 
 site_poses = []
 for i in range(number_of_images):
@@ -149,13 +151,8 @@ proj_RGBimg = aos.render(
     utils_pose_to_virtualcamera(site_poses[center_index]), render_fov
 )
 
-print(proj_RGBimg.min())
-print(proj_RGBimg.max())
-
 tmp_RGB = divide_by_alpha(proj_RGBimg)
-print(tmp_RGB.min())
-print(tmp_RGB.max())
 
 cv2.imwrite(
-    os.path.join(results_path, f"integral_{str(0)}.png"), tmp_RGB
+    os.path.join(results_path, "integral.png"), tmp_RGB
 )
