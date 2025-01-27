@@ -1,20 +1,16 @@
-# when sunlight effect is zero we can check the temperature with imagej to measure a fixpoint
-# and see if it is the same as the tree
+# TODO Improvements
+# 
+# each folder will have different ground temperature and the folder will be named based on the ground temperature
+# no masking 
+# 
+#
+# 
+# 
+# 
+# 
+# 
+# 
 
-# conversion via new script
-
-# pick random temp and the folder
-# set tree temp to picked random enviornment temp +- 4 deg (will be discussed)
-# direct factor will also depent on that (currently 0 so no effect)
-# all those should be in celsius so we convert them to kelvin
-# lower threshold and upper threshold, set to min and max temp of image
-
-# extract min and max of image in celsius ie (6 and 60 celsius)
-# some calculation for tree (env temp of 25 +- something)
-# min and max (direct thermal temp will be considered)
-
-
-import logging
 
 import os
 import random
@@ -26,7 +22,6 @@ import gz.math7 as gzm
 from photo_shoot_config import PhotoShootConfig
 from forest_config import ForestConfig
 from world_config import WorldConfig
-from uuid import uuid4
 from launcher import Launcher
 from typing import Tuple, Union
 from math import sin, cos, atan2, sqrt
@@ -34,7 +29,7 @@ from math import sin, cos, atan2, sqrt
 
 Number = Union[int, float]
 Vector = Tuple[Number, Number, Number]
-logger = logging.getLogger(__name__)
+
 
 class SimulationRunner:
     def __init__(self):
@@ -51,20 +46,16 @@ class SimulationRunner:
 
         # Initialize counters and iteration settings
         self.PC_Num = 0
-        self.iter_Number = 1000
+        self.iter_Number = 1000000
         self.iteration = 0
         
         # Set a default temperature threshold (in degrees Celsius)
-        self.temperature_threshold_C = 25
+        self.temperature_threshold_C = 25 # somewhere between 25 and 60 
         self.temperature_threshold_K = self.temperature_threshold_C + 273.15
 
-        # Path to the thermal texture database in PNG
+        # Path to the thermal texture database
         self.thermal_texture_dir = "/home/mdigruber/gazebo_simulator/thermal_textures/png_images"
-        
-        # Path to the thermal texture database in TIF (for min and max temp)
-        self.thermal_texture_dir_tif = "/home/mdigruber/gazebo_simulator/thermal_textures/tif_images"
-    
-    
+
     def run(self):
         for i in range(self.iter_Number):
             self.iteration = i
@@ -96,12 +87,6 @@ class SimulationRunner:
 
     def generate_random_parameters(self):
         
-        # Random Env Temp and get texture from folder
-        self.env_temperature = random.randint(8,10) # TODO: Specify
-        self.thermal_texture_dir = f"{self.thermal_texture_dir}/{self.env_temperature}"
-        self.thermal_texture_dir_tif = f"{self.thermal_texture_dir_tif}/{self.env_temperature}"
-        print(f"Selected Env temp: {self.env_temperature}")
-
         # Randomly select a thermal texture
         thermal_textures = [
             f for f in os.listdir(self.thermal_texture_dir) if f.endswith(".png")
@@ -113,14 +98,11 @@ class SimulationRunner:
         self.x_rand_treeNum = random.randint(0, 300)
         print("Number of trees per hectare =", self.x_rand_treeNum)
 
-
-        self.get_min_max_temp()
-
         # Ambient light
-        # self.x_rand_ambient = random.uniform(0.5, 1.0)
+        self.x_rand_ambient = random.uniform(0.5, 1.0)
 
-        # print("Ambient light =", self.x_rand_ambient)
-
+        print("Ambient light =", self.x_rand_ambient)
+        
         # Azimuth angle of sunlight direction (Alpha)
         self.x_rand_Alpha = random.uniform(0, 45)
         self.x_rand_Alpha_rad = math.radians(self.x_rand_Alpha)
@@ -144,61 +126,58 @@ class SimulationRunner:
         print(f"Tree top temperature: {self.x_rand_Tree_C}°C / {self.x_rand_Tree}K")
 
     def configure_light_and_scene(self):
+
         # Configure the sun as the light source
         light = self.world_config.get_light("sun")
-        # light.set_direction(gzm.Vector3d(self.x_1, self.x_2, self.x_3))
-        light.set_direction(gzm.Vector3d(0.5, 0.5, -0.9))
-        # light.set_cast_shadows(False)
+        light.set_direction(gzm.Vector3d(self.x_1, self.x_2, self.x_3))
+        light.set_cast_shadows(False)
 
+        # Configure the scene
+        scene = self.world_config.get_scene()
+        scene.set_ambient(
+            gzm.Color(
+                self.x_rand_ambient, self.x_rand_ambient, self.x_rand_ambient, 1.0
+            )
+        )
 
     def configure_photo_shoot(self, i: int):
         photo_shoot_config = PhotoShootConfig()
-        # Define the environment temperature as a string to use in the folder path
-        env_temp_str = str(self.env_temperature)
-        
-        # Construct the path for the environment temperature folder
-        env_temp_folder = os.path.join(self.output_directory, env_temp_str)
-        
-        # Ensure the environment temperature folder exists; create it if it doesn't
-        os.makedirs(env_temp_folder, exist_ok=True)
-        
-        # Construct the path for the current iteration's patch folder within the env_temp folder
-        patch_folder = os.path.join(env_temp_folder, str(uuid4().hex))
-        
-        # Remove the patch folder if it already exists to ensure a clean setup
-        if not os.path.exists(patch_folder):
-            os.makedirs(patch_folder)
-        else:
-            print("already exists")
-            patch_folder = os.path.join(env_temp_folder, str(uuid4))
-            os.makedirs(patch_folder)
 
-        # Update the instance variable to point to the new patch folder
-        self.patch_folder = patch_folder
+        # Generate folder for every iteration
+        self.patch_folder = os.path.join(self.output_directory, f"{i}")
 
+        # Remove the folder if it exists
+        if os.path.exists(self.patch_folder):
+            shutil.rmtree(self.patch_folder)
+
+        os.makedirs(self.patch_folder)
+
+        # Gets the min and max temperature in Kelvin
         photo_shoot_config.set_directory(self.patch_folder)
 
         img_Name = f"{self.PC_Num}_{i}"
         photo_shoot_config.set_prefix(img_Name)
 
         # Set camera properties
-        photo_shoot_config.set_direct_thermal_factor(0)  # direct sunlight - TODO (0 - 64, will be discussed) 
-        photo_shoot_config.set_indirect_thermal_factor(0)  # indirect sunlight - ambient temperature
+        # TODO: Disable Sunlight 
+        #photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
+        #photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
 
         photo_shoot_config.set_save_rgb(False)
         photo_shoot_config.set_save_thermal(True)
         photo_shoot_config.set_save_depth(False)
 
-        # Saves label Mask
+        # Saves label Mask - not needed because other student will do that
         # self.save_label_mask()
 
+        # Set thermal thresholds based on expected temperature ranges
         lower_thermal_threshold = self.min_ground_temp_K - 10
         upper_thermal_threshold = self.max_ground_temp_K + 10
 
         photo_shoot_config.set_lower_thermal_threshold(lower_thermal_threshold)
         photo_shoot_config.set_upper_thermal_threshold(upper_thermal_threshold)
 
-        # Define drone poses along a straight line with 0.5m spacing
+        # Define drone poses along a straight line with 0.5m spacing (vertical)
         num_images = 31
         spacing = 0.5
 
@@ -229,29 +208,28 @@ class SimulationRunner:
         forest_config = self.forest_config
 
         forest_config.set_generate(True)
+        forest_config.set_ground_texture(0)
         forest_config.set_direct_spawning(True)
-     
+
+
+        #TODO: Check if correct
+        forest_config.set_texture_size(23)
+
         # Use the selected thermal texture
-        # map to minimum an maximum in the thermal texture
         forest_config.set_ground_thermal_texture(
             os.path.join(self.thermal_texture_dir, self.thermal_texture),
-            0,#self.min_ground_temp_K, # Minimal  temperature in Kelvin
-            655,#self.max_ground_temp_K # Minimal # Maximal temperature in Kelvin
+            self.min_ground_temp_K,  # Minimal temperature in Kelvin
+            self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
-        # still in discussion (3 or 4 degress less then env. temperature)
-        #forest_config.set_trunk_temperature(303)  # In Kelvin
-        #forest_config.set_twigs_temperature(303)  # In Kelvin
-        
-        forest_config.set_trunk_temperature(self.env_temperature - 3)  # In Kelvin
-        forest_config.set_twigs_temperature(self.env_temperature - 3)  # In Kelvin
+        forest_config.set_trunk_temperature(self.min_ground_temp_K)  # In Kelvin
+        forest_config.set_twigs_temperature(self.min_ground_temp_K)  # In Kelvin
 
-        # 23 to 23 Meters in Reallife
-        forest_config.set_size(37)  # fits exact to the 31 drone images
-        forest_config.set_texture_size(37)
+
+        #TODO: Check if correct
+        forest_config.set_size(100)  # Set forest size to 35x35 meters
 
         forest_config.set_trees(self.x_rand_treeNum)
-        # forest_config.set_trees(10)
 
         # Define tree species and properties (adjust as needed)
         forest_config.set_species(
@@ -286,23 +264,30 @@ class SimulationRunner:
 
         self.world_config.add_plugin(forest_config)
 
-    def get_min_max_temp(self):
+    def compute_label_mask(self):
+        thermal_texture = "/home/mdigruber/gazebo_simulator/thermal_textures/tif_images"
         thermal_texture_tif_image = os.path.join(
-            self.thermal_texture_dir_tif, self.thermal_texture.replace(".png", ".TIF")
+            thermal_texture, self.thermal_texture.replace(".png", ".TIF")
         )
         thermal_image = np.array(Image.open(thermal_texture_tif_image))
 
-        thermal_image_C = thermal_image
         thermal_image_K = thermal_image + 273.15
 
-        self.min_ground_temp_C = thermal_image_C.min()
-        self.max_ground_temp_C = thermal_image_C.max()
         self.min_ground_temp_K = thermal_image_K.min()
         self.max_ground_temp_K = thermal_image_K.max()
 
-        print(f"Min Ground Temp: {self.min_ground_temp_C} C / {self.min_ground_temp_K} K")
-        print(f"Max Ground Temp: {self.max_ground_temp_C} C / {self.max_ground_temp_K} K ")
+        print(f"Min Ground Temp: {self.min_ground_temp_K - 273.15} C / {self.min_ground_temp_K} K")
+        print(f"Max Ground Temp: {self.max_ground_temp_K - 273.15} C / {self.max_ground_temp_K} K")
 
+        label_mask = np.where(thermal_image >= self.temperature_threshold_C, 1, 0)
+
+        return label_mask
+
+    def save_label_mask(self):
+        label_mask = self.compute_label_mask()
+
+        label_mask_path = os.path.join(self.patch_folder, "label_mask.npy")
+        np.save(label_mask_path, label_mask)
 
     def save_world_config(self):
         self.world_config.save(self.world_file_out)
@@ -363,7 +348,8 @@ class SimulationRunner:
         # Configure light and scene with the same parameters
         self.configure_light_and_scene()
 
-        self.configure_photo_shoot_ground_truth()
+        # Configure photo shoot with only one pose at (0,0,35)
+        self.configure_photo_shoot_ground_truth(i)
 
         # Remove forest by setting trees to zero
         self.configure_forest_ground_truth()
@@ -374,19 +360,19 @@ class SimulationRunner:
         # Launch the simulation
         self.launch_simulation()
 
-    def configure_photo_shoot_ground_truth(self):
+    def configure_photo_shoot_ground_truth(self, i):
         photo_shoot_config = PhotoShootConfig()
 
         # Use the same folder
         photo_shoot_config.set_directory(self.patch_folder)
 
         # Set a different prefix for the ground truth images
-        img_Name = f"gt_{self.PC_Num}"
+        img_Name = f"gt_{self.PC_Num}_{i}"
         photo_shoot_config.set_prefix(img_Name)
 
         # Set camera properties as before
-        photo_shoot_config.set_direct_thermal_factor(0)  # direct sunlight TODO
-        photo_shoot_config.set_indirect_thermal_factor(0)  # indirect sunlight TODO
+        photo_shoot_config.set_direct_thermal_factor(20)  # direct sunlight
+        photo_shoot_config.set_indirect_thermal_factor(5)  # indirect sunlight
 
         photo_shoot_config.set_save_rgb(False)
         photo_shoot_config.set_save_thermal(True)
@@ -412,15 +398,15 @@ class SimulationRunner:
         # Set forest generation but with zero trees
         forest_config.set_generate(True)
         forest_config.set_trees(0)
-        forest_config.set_size(37)
+        forest_config.set_ground_texture(0)
         forest_config.set_direct_spawning(True)
-        forest_config.set_texture_size(37)
+        forest_config.set_texture_size(35)
 
         # Use the same ground thermal texture
         forest_config.set_ground_thermal_texture(
             os.path.join(self.thermal_texture_dir, self.thermal_texture),
-            self.min_ground_temp_K, # Minimal temperature in Kelvin
-            self.max_ground_temp_K # Maximal temperature in Kelvin
+            self.min_ground_temp_K,  # Minimal temperature in Kelvin
+            self.max_ground_temp_K,  # Maximal temperature in Kelvin
         )
 
         self.world_config.add_plugin(forest_config)

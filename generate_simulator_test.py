@@ -51,7 +51,7 @@ class SimulationRunner:
 
         # Initialize counters and iteration settings
         self.PC_Num = 0
-        self.iter_Number = 1000
+        self.iter_Number = 1
         self.iteration = 0
         
         # Set a default temperature threshold (in degrees Celsius)
@@ -97,7 +97,7 @@ class SimulationRunner:
     def generate_random_parameters(self):
         
         # Random Env Temp and get texture from folder
-        self.env_temperature = random.randint(8,10) # TODO: Specify
+        self.env_temperature = random.randint(8,10) # TODO: specify
         self.thermal_texture_dir = f"{self.thermal_texture_dir}/{self.env_temperature}"
         self.thermal_texture_dir_tif = f"{self.thermal_texture_dir_tif}/{self.env_temperature}"
         print(f"Selected Env temp: {self.env_temperature}")
@@ -114,7 +114,7 @@ class SimulationRunner:
         print("Number of trees per hectare =", self.x_rand_treeNum)
 
 
-        self.get_min_max_temp()
+        #self.get_min_max_temp()
 
         # Ambient light
         # self.x_rand_ambient = random.uniform(0.5, 1.0)
@@ -150,6 +150,13 @@ class SimulationRunner:
         light.set_direction(gzm.Vector3d(0.5, 0.5, -0.9))
         # light.set_cast_shadows(False)
 
+        # # Configure the scene (not needed)
+        # scene = self.world_config.get_scene()
+        # scene.set_ambient(
+        #     gzm.Color(
+        #         self.x_rand_ambient, self.x_rand_ambient, self.x_rand_ambient, 1.0
+        #     )
+        # )
 
     def configure_photo_shoot(self, i: int):
         photo_shoot_config = PhotoShootConfig()
@@ -191,6 +198,10 @@ class SimulationRunner:
 
         # Saves label Mask
         # self.save_label_mask()
+
+        # Set thermal thresholds based on expected temperature ranges (TODO delete)
+        self.min_ground_temp_K = 263
+        self.max_ground_temp_K = 306
 
         lower_thermal_threshold = self.min_ground_temp_K - 10
         upper_thermal_threshold = self.max_ground_temp_K + 10
@@ -240,18 +251,17 @@ class SimulationRunner:
         )
 
         # still in discussion (3 or 4 degress less then env. temperature)
-        #forest_config.set_trunk_temperature(303)  # In Kelvin
-        #forest_config.set_twigs_temperature(303)  # In Kelvin
-        
-        forest_config.set_trunk_temperature(self.env_temperature - 3)  # In Kelvin
-        forest_config.set_twigs_temperature(self.env_temperature - 3)  # In Kelvin
+        #forest_config.set_trunk_temperature(self.env_temperature - 3)  # In Kelvin
+        forest_config.set_trunk_temperature(303)  # In Kelvin
+        #forest_config.set_twigs_temperature(self.env_temperature - 3)  # In Kelvin
+        forest_config.set_twigs_temperature(303)  # In Kelvin
 
         # 23 to 23 Meters in Reallife
         forest_config.set_size(37)  # fits exact to the 31 drone images
         forest_config.set_texture_size(37)
 
-        forest_config.set_trees(self.x_rand_treeNum)
-        # forest_config.set_trees(10)
+        # forest_config.set_trees(self.x_rand_treeNum)
+        forest_config.set_trees(10)
 
         # Define tree species and properties (adjust as needed)
         forest_config.set_species(
@@ -419,8 +429,8 @@ class SimulationRunner:
         # Use the same ground thermal texture
         forest_config.set_ground_thermal_texture(
             os.path.join(self.thermal_texture_dir, self.thermal_texture),
-            self.min_ground_temp_K, # Minimal temperature in Kelvin
-            self.max_ground_temp_K # Maximal temperature in Kelvin
+            0, #self.min_ground_temp_K, # Minimal temperature in Kelvin
+            655#self.max_ground_temp_K # Maximal temperature in Kelvin
         )
 
         self.world_config.add_plugin(forest_config)
