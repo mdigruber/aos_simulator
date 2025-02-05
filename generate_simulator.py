@@ -1,19 +1,3 @@
-# when sunlight effect is zero we can check the temperature with imagej to measure a fixpoint
-# and see if it is the same as the tree
-
-# conversion via new script
-
-# pick random temp and the folder
-# set tree temp to picked random enviornment temp +- 4 deg (will be discussed)
-# direct factor will also depent on that (currently 0 so no effect)
-# all those should be in celsius so we convert them to kelvin
-# lower threshold and upper threshold, set to min and max temp of image
-
-# extract min and max of image in celsius ie (6 and 60 celsius)
-# some calculation for tree (env temp of 25 +- something)
-# min and max (direct thermal temp will be considered)
-
-
 import logging
 
 import os
@@ -22,6 +6,7 @@ import numpy as np
 from PIL import Image
 import math
 import shutil
+import time
 import gz.math7 as gzm
 from photo_shoot_config import PhotoShootConfig
 from forest_config import ForestConfig
@@ -30,7 +15,7 @@ from uuid import uuid4
 from launcher import Launcher
 from typing import Tuple, Union
 from math import sin, cos, atan2, sqrt
-
+from aos_image import AOSRenderer
 
 Number = Union[int, float]
 Vector = Tuple[Number, Number, Number]
@@ -64,6 +49,13 @@ class SimulationRunner:
         # Path to the thermal texture database in TIF (for min and max temp)
         self.thermal_texture_dir_tif = "/home/mdigruber/gazebo_simulator/thermal_textures/tif_images"
     
+        # AOS Config
+        # image_folder_path = "/path/to/your/images"
+        # results_path = "/path/to/save/results"
+        self.set_folder = r"/home/mdigruber/AOS/AOS for Drone Swarms/LFR/python"
+        # pose_file = "/path/to/poses.txt"
+        self.generated_images = False
+
     
     def run(self):
         for i in range(self.iter_Number):
@@ -85,9 +77,11 @@ class SimulationRunner:
             # Save the world configuration
             self.save_world_config()
 
-            # Launch the simulation
+            # Launch the simulation and wait until it is finished
             self.launch_simulation()
 
+            self.generate_aos_image()
+           
             # Generate ground truth image
             self.generate_ground_truth(i)
 
@@ -112,7 +106,6 @@ class SimulationRunner:
         # Number of trees per hectare (ha)
         self.x_rand_treeNum = random.randint(0, 300)
         print("Number of trees per hectare =", self.x_rand_treeNum)
-
 
         self.get_min_max_temp()
 
@@ -149,7 +142,6 @@ class SimulationRunner:
         # light.set_direction(gzm.Vector3d(self.x_1, self.x_2, self.x_3))
         light.set_direction(gzm.Vector3d(0.5, 0.5, -0.9))
         # light.set_cast_shadows(False)
-
 
     def configure_photo_shoot(self, i: int):
         photo_shoot_config = PhotoShootConfig()
@@ -313,10 +305,12 @@ class SimulationRunner:
         launcher.set_launch_config("running", True)
         launcher.set_launch_config("iterations", 2)
         launcher.set_launch_config("world", self.world_file_out)
-        print(launcher.launch())
-
-    def compute_integral_image(self):
-        pass
+        process = launcher.launch()
+        if hasattr(process, "wait"):
+            process.wait()
+        else:
+            time.sleep(5)
+        print("Simulation process has completed.")
 
     def write_poses(self):
         label_path = f"{self.patch_folder}/poses.txt"
@@ -424,6 +418,22 @@ class SimulationRunner:
         )
 
         self.world_config.add_plugin(forest_config)
+
+    def generate_aos_image(self):
+
+        renderer = AOSRenderer(
+            image_folder_path=self.patch_folder,
+            results_path=self.patch_folder,
+            set_folder=self.set_folder,
+            pose_file=os.path.join(self.patch_folder, "poses.txt"),
+            w=512,
+            h=512,
+            fovDegrees=35,
+            render_fov=35,
+            number_of_images=31,
+            focal_plane=34,
+        )
+        renderer.render()
 
 
 if __name__ == "__main__":
